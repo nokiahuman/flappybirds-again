@@ -3,6 +3,8 @@
 ## Overview
 Flappy Birds Again is a fun, engaging game built using HTML and JavaScript that captures the essence of the original Flappy Birds game. The goal is simple: navigate your bird through a series of pipes without crashing into them.
 
+**Play the game here:** https://quiet-octopus.static2.website/flappy
+
 ## Features
 - **Responsive Design**: Works well on mobile and desktop browsers.
 - **Easy to Play**: One-touch gameplay for a smooth experience.
