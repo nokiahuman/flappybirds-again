@@ -1,30 +1,717 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird Again</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Flappy Bird — Clear Wing, No Eye Cover</title>
     <style>
-        body { background-color: skyblue; }
-        #bird { width: 50px; height: 40px; background-color: yellow; position: absolute; left: 100px; }
-        @keyframes flap { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+    * {
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    body {
+        background: #71c5cf;
+        margin: 0;
+        overflow: hidden;
+        height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;    
+    }
+    #game {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    /* BIRD BODY — redesigned wing positions to never cover the eye */
+    #bird {
+        position: absolute;
+        width: 38px;
+        height: 26px;
+        background: #ffcc00;
+        border-radius: 18px;
+        left: 120px;
+        transition: transform 0.08s linear;
+        box-shadow: inset -3px -3px 0 rgba(0,0,0,0.1);
+        z-index: 5;
+        border: 2px solid #000;
+    }
+    /* The EYE — stays perfectly visible, never overlapped by wings */
+    #bird::before {
+        content: "";
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        width: 7px;
+        height: 7px;
+        background: white;
+        border-radius: 50%;
+        border: 1.5px solid #000;
+        z-index: 12;
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+    }
+    /* The BEAK — sharp and clear */
+    #bird::after {
+        content: "";
+        position: absolute;
+        top: 10px;
+        right: -10px;
+        width: 12px;
+        height: 10px;
+        background: #ff5722;
+        border: 2px solid #000;
+        border-radius: 2px 8px 8px 2px;
+        z-index: 10;
+    }
+    
+    /* ----- LEFT WING (repositioned: lower & more outward, never near eye) ----- */
+    #bird-wing-left {
+        position: absolute;
+        top: 14px;          /* moved DOWN from 6px → eye stays above wing */
+        left: -12px;        /* extended outward for natural look, avoids overlap */
+        width: 22px;
+        height: 18px;
+        transform-origin: right center;
+        z-index: 3;
+    }
+
+    .wing-cylinder-left {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        background: linear-gradient(90deg, #e6a300 0%, #f4b400 50%, #e6a300 100%);
+        border-radius: 50%;
+        border: 2px solid #000;
+        box-shadow: inset -2px 0 3px rgba(0,0,0,0.3), inset 2px 0 3px rgba(255,255,255,0.3);
+        left: 0;
+        top: 2px;
+    }
+
+    .wing-feather-left {
+        position: absolute;
+        background: linear-gradient(135deg, #f4b400 0%, #d69b00 100%);
+        border: 1px solid #000;
+        border-radius: 0 12px 12px 0;
+        box-shadow: inset -1px -1px 0 rgba(0,0,0,0.2);
+    }
+
+    .feather-left-1 {
+        width: 13px;
+        height: 5px;
+        left: 11px;
+        top: 0px;
+        transform: rotate(-12deg);
+    }
+
+    .feather-left-2 {
+        width: 14px;
+        height: 6px;
+        left: 12px;
+        top: 6px;
+        transform: rotate(0deg);
+    }
+
+    .feather-left-3 {
+        width: 13px;
+        height: 5px;
+        left: 11px;
+        top: 12px;
+        transform: rotate(12deg);
+    }
+
+    /* ----- RIGHT WING (repositioned: lower + outward, clear of eye zone) ----- */
+    #bird-wing-right {
+        position: absolute;
+        top: 14px;          /* lowered to stay below eye level */
+        right: -12px;       /* extends right, away from eye region */
+        width: 22px;
+        height: 18px;
+        transform-origin: left center;
+        z-index: 3;
+    }
+
+    .wing-cylinder-right {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        background: linear-gradient(90deg, #e6a300 0%, #f4b400 50%, #e6a300 100%);
+        border-radius: 50%;
+        border: 2px solid #000;
+        box-shadow: inset -2px 0 3px rgba(0,0,0,0.3), inset 2px 0 3px rgba(255,255,255,0.3);
+        right: 0;
+        top: 2px;
+    }
+
+    .wing-feather-right {
+        position: absolute;
+        background: linear-gradient(45deg, #f4b400 0%, #d69b00 100%);
+        border: 1px solid #000;
+        border-radius: 12px 0 0 12px;
+        box-shadow: inset 1px -1px 0 rgba(0,0,0,0.2);
+    }
+
+    .feather-right-1 {
+        width: 13px;
+        height: 5px;
+        right: 11px;
+        top: 0px;
+        transform: rotate(12deg);
+    }
+
+    .feather-right-2 {
+        width: 14px;
+        height: 6px;
+        right: 12px;
+        top: 6px;
+        transform: rotate(0deg);
+    }
+
+    .feather-right-3 {
+        width: 13px;
+        height: 5px;
+        right: 11px;
+        top: 12px;
+        transform: rotate(-12deg);
+    }
+
+    /* Flap animations — smooth, dynamic, still respects new positions */
+    @keyframes flap-left {
+        0% { transform: rotateZ(0deg); }
+        50% { transform: rotateZ(-55deg); }
+        100% { transform: rotateZ(0deg); }
+    }
+
+    @keyframes flap-right {
+        0% { transform: rotateZ(0deg); }
+        50% { transform: rotateZ(55deg); }
+        100% { transform: rotateZ(0deg); }
+    }
+
+    #bird-wing-left.flapping {
+        animation: flap-left 0.25s ease-in-out;
+    }
+
+    #bird-wing-right.flapping {
+        animation: flap-right 0.25s ease-in-out;
+    }
+
+    /* Enhanced Pipe Design — classic & juicy */
+    .pipe {
+        position: absolute;
+        width: 70px;
+        background: linear-gradient(90deg, #3e9e3e 0%, #5ac45a 40%, #5ac45a 60%, #3e9e3e 100%);
+        border: 4px solid #2e7d32;
+        border-radius: 12px;
+        box-sizing: border-box;
+        box-shadow: inset -4px 0 6px rgba(0,0,0,0.4), inset 4px 0 6px rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .pipe::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 8px;
+        background: linear-gradient(180deg, #6dd46d 0%, #4a9d4a 100%);
+        border: 2px solid #1e5d1e;
+        border-radius: 8px 8px 0 0;
+        left: -4px;
+        top: -8px;
+        box-shadow: inset 0 2px 3px rgba(255,255,255,0.3);
+    }
+
+    .pipe::after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 8px;
+        background: linear-gradient(180deg, #4a9d4a 0%, #2e7d32 100%);
+        border: 2px solid #1e5d1e;
+        border-radius: 0 0 8px 8px;
+        left: -4px;
+        bottom: -8px;
+        box-shadow: inset 0 -2px 3px rgba(0,0,0,0.4);
+    }
+
+    .pipe-detail-line {
+        position: absolute;
+        width: 2px;
+        background: linear-gradient(180deg, rgba(46, 125, 50, 0.5) 0%, rgba(46, 125, 50, 0) 100%);
+        height: 100%;
+        left: 17px;
+        z-index: 2;
+    }
+
+    .pipe-detail-line.right {
+        left: 51px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+    }
+
+    #score {
+        position: absolute;
+        top: 40px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 60px;
+        font-weight: bold;
+        color: white;
+        text-shadow: 3px 3px 0 #000,-3px 3px 0 #000,3px -3px 0 #000,-3px -3px 0 #000;
+        pointer-events: none;
+        z-index: 10;
+        display: none;
+        font-family: monospace;
+    }
+    
+    .ui-screen {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(3px);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 20;
+        text-shadow: 2px 2px 4px #000;
+    }
+    
+    .ui-screen h1 {
+        font-size: 60px;
+        margin: 0 0 20px 0;
+        color: #ffcc00;
+        letter-spacing: 2px;
+    }
+    
+    .score-board {
+        background: #ded895;
+        border: 4px solid #c7b56f;
+        border-radius: 18px;
+        padding: 20px 40px;
+        text-align: center;
+        color: #333;
+        text-shadow: none;
+        margin-bottom: 30px;
+        font-weight: bold;
+        box-shadow: 0 8px 0 rgba(0,0,0,0.2);
+    }
+    
+    .score-board p {
+        margin: 10px 0;
+        font-size: 24px;
+    }
+    
+    .score-board span {
+        font-size: 34px;
+        color: #d9534f;
+        font-weight: 800;
+    }
+    
+    button.play-btn {
+        background: #5ac45a;
+        border: none;
+        border-bottom: 6px solid #2e7d32;
+        border-radius: 40px;
+        color: white;
+        font-size: 32px;
+        padding: 12px 44px;
+        cursor: pointer;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px #000;
+        transition: 0.07s linear;
+        font-family: inherit;
+    }
+    
+    button.play-btn:active {
+        transform: scale(0.96);
+        border-bottom-width: 2px;
+    }
+    
+    .ground {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 120px;
+        background: #ded895;
+        border-top: 8px solid #c7b56f;
+        z-index: 15;
+        box-shadow: 0 -4px 0 #a58e4b;
+    }
+    
+    /* small screen responsiveness */
+    @media (max-width: 500px) {
+        #bird {
+            left: 80px;
+        }
+        .pipe {
+            width: 60px;
+        }
+        .pipe-detail-line {
+            left: 14px;
+        }
+        .pipe-detail-line.right {
+            left: 44px;
+        }
+    }
     </style>
 </head>
 <body>
-    <div id="bird"></div>
-    <script>
-        let bird = document.getElementById('bird');
-        let isFlapping = false;
+<div id="game">
+    <div id="bird">
+        <div id="bird-wing-left">
+            <div class="wing-cylinder-left"></div>
+            <div class="wing-feather-left feather-left-1"></div>
+            <div class="wing-feather-left feather-left-2"></div>
+            <div class="wing-feather-left feather-left-3"></div>
+        </div>
+        <div id="bird-wing-right">
+            <div class="wing-cylinder-right"></div>
+            <div class="wing-feather-right feather-right-1"></div>
+            <div class="wing-feather-right feather-right-2"></div>
+            <div class="wing-feather-right feather-right-3"></div>
+        </div>
+    </div>
+    <div id="score">0</div>
+    <div class="ground"></div>
 
-        document.addEventListener('keydown', function(event) {
-            if (event.code === 'Space') {
-                isFlapping = true;
-                bird.style.animation = 'flap 0.5s';
-                setTimeout(() => {
-                    bird.style.animation = '';
-                }, 500);
+    <div id="home-screen" class="ui-screen">
+        <h1>🐦 FLAPPY BIRD</h1>
+        <div class="score-board">
+            <p>⭐ LAST SCORE: <span id="recent-score-display">0</span></p>
+            <p>🏆 BEST: <span id="high-score-display">0</span></p>
+        </div>
+        <button class="play-btn" id="start-btn">FLY NOW</button>
+        <p style="font-size: 15px; margin-top: 24px; opacity:0.9;">▼ SPACE / CLICK / TAP ▼</p>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ----- DOM elements -----
+        const game = document.getElementById('game');
+        const bird = document.getElementById('bird');
+        const wingLeft = document.getElementById('bird-wing-left');
+        const wingRight = document.getElementById('bird-wing-right');
+        const scoreEl = document.getElementById('score');
+        const homeScreen = document.getElementById('home-screen');
+        const recentScoreDisplay = document.getElementById('recent-score-display');
+        const highScoreDisplay = document.getElementById('high-score-display');
+        const startBtn = document.getElementById('start-btn');
+        
+        // ----- Game variables -----
+        let birdY = 250;
+        let velocity = 0;
+        const GRAVITY = 0.5;
+        const JUMP_POWER = -9;
+        let pipes = [];
+        let score = 0;
+        let gameActive = false;
+        let gameSpeed = 2.5;
+        let frameCounter = 0;
+        
+        // highscore from storage
+        let highScore = localStorage.getItem('flappyHighScore') ? parseInt(localStorage.getItem('flappyHighScore')) : 0;
+        highScoreDisplay.textContent = highScore;
+        
+        // ----- Helper: trigger wing flap animation (always clean, never covers eye) -----
+        function triggerWingFlap() {
+            if (!gameActive) return;
+            wingLeft.classList.remove('flapping');
+            wingRight.classList.remove('flapping');
+            // force reflow to restart animation
+            void wingLeft.offsetWidth;
+            void wingRight.offsetWidth;
+            wingLeft.classList.add('flapping');
+            wingRight.classList.add('flapping');
+            // remove class after animation ends to avoid residue
+            setTimeout(() => {
+                if(wingLeft) wingLeft.classList.remove('flapping');
+                if(wingRight) wingRight.classList.remove('flapping');
+            }, 260);
+        }
+        
+        // ----- Reset visuals & init home screen -----
+        function initHome() {
+            gameActive = false;
+            homeScreen.style.display = 'flex';
+            scoreEl.style.display = 'none';
+            // reset bird position to center
+            birdY = window.innerHeight / 2 - 13;
+            bird.style.top = birdY + 'px';
+            bird.style.transform = 'rotate(0deg)';
+            velocity = 0;
+        }
+        
+        // ----- Core: Start/Restart game -----
+        function startGame() {
+            // reset bird physics
+            birdY = window.innerHeight / 2 - 13;
+            velocity = 0;
+            score = 0;
+            frameCounter = 0;
+            scoreEl.textContent = "0";
+            
+            // remove all existing pipes
+            pipes.forEach(p => {
+                if(p.top && p.top.remove) p.top.remove();
+                if(p.bottom && p.bottom.remove) p.bottom.remove();
+            });
+            pipes = [];
+            
+            // hide menu, show score
+            homeScreen.style.display = 'none';
+            scoreEl.style.display = 'block';
+            gameActive = true;
+            
+            // small jump effect on start to give momentum
+            velocity = JUMP_POWER * 0.9;
+            triggerWingFlap();
+            
+            // reset bird rotation visually
+            bird.style.transform = `rotate(-15deg)`;
+        }
+        
+        // ----- Game Over handler -----
+        function gameOver() {
+            if (!gameActive) return;
+            gameActive = false;
+            
+            // update highscore UI
+            recentScoreDisplay.textContent = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('flappyHighScore', highScore);
+                highScoreDisplay.textContent = highScore;
+            } else {
+                highScoreDisplay.textContent = highScore;
+            }
+            
+            // show home screen after tiny delay
+            setTimeout(() => {
+                homeScreen.style.display = 'flex';
+                scoreEl.style.display = 'none';
+            }, 400);
+        }
+        
+        // ----- Create new pipe pair (gap 160px) -----
+        function createPipe() {
+            const gap = 160;
+            const groundHeight = 120;
+            const minTopHeight = 55;
+            const maxTopHeight = window.innerHeight - gap - groundHeight - minTopHeight;
+            let topHeight = Math.floor(Math.random() * (maxTopHeight - minTopHeight + 1) + minTopHeight);
+            topHeight = Math.min(Math.max(topHeight, 50), window.innerHeight - gap - groundHeight - 10);
+            
+            const pipeTop = document.createElement('div');
+            pipeTop.className = 'pipe pipe-top';
+            pipeTop.style.height = topHeight + 'px';
+            pipeTop.style.left = window.innerWidth + 'px';
+            pipeTop.style.top = '0px';
+            
+            const detailLineTop1 = document.createElement('div');
+            detailLineTop1.className = 'pipe-detail-line';
+            pipeTop.appendChild(detailLineTop1);
+            const detailLineTop2 = document.createElement('div');
+            detailLineTop2.className = 'pipe-detail-line right';
+            pipeTop.appendChild(detailLineTop2);
+            
+            const bottomHeight = window.innerHeight - topHeight - gap - groundHeight;
+            const pipeBottom = document.createElement('div');
+            pipeBottom.className = 'pipe pipe-bottom';
+            pipeBottom.style.height = bottomHeight + 'px';
+            pipeBottom.style.left = window.innerWidth + 'px';
+            pipeBottom.style.bottom = groundHeight + 'px';
+            
+            const detailLineBot1 = document.createElement('div');
+            detailLineBot1.className = 'pipe-detail-line';
+            pipeBottom.appendChild(detailLineBot1);
+            const detailLineBot2 = document.createElement('div');
+            detailLineBot2.className = 'pipe-detail-line right';
+            pipeBottom.appendChild(detailLineBot2);
+            
+            game.appendChild(pipeTop);
+            game.appendChild(pipeBottom);
+            pipes.push({ top: pipeTop, bottom: pipeBottom, scored: false });
+        }
+        
+        // ----- JUMP action (space, click, tap) -----
+        function jump() {
+            if (!gameActive) {
+                // if game is not active but home screen visible -> start game
+                if (homeScreen.style.display === 'flex') {
+                    startGame();
+                }
+                return;
+            }
+            // apply jump impulse
+            velocity = JUMP_POWER;
+            triggerWingFlap();
+            // small dynamic rotation effect
+            bird.style.transform = `rotate(-25deg)`;
+            setTimeout(() => {
+                if (gameActive) bird.style.transform = `rotate(${Math.min(Math.max(velocity * 4, -30), 40)}deg)`;
+            }, 70);
+        }
+        
+        // ----- Animation Loop & Collisions (wing positions fixed, eyes safe)-----
+        function update() {
+            requestAnimationFrame(update);
+            if (!gameActive) return;
+            
+            // gravity physics
+            velocity += GRAVITY;
+            birdY += velocity;
+            bird.style.top = birdY + 'px';
+            
+            // rotation based on vertical velocity
+            let rot = Math.min(Math.max(velocity * 4, -30), 60);
+            bird.style.transform = `rotate(${rot}deg)`;
+            
+            // collision with ground or ceiling
+            const birdHeight = 26;
+            const groundLimit = window.innerHeight - 120;
+            if (birdY + birdHeight > groundLimit || birdY < 0) {
+                gameOver();
+                return;
+            }
+            
+            // ----- pipe movement + collision detection (robust)-----
+            const birdRect = {
+                left: 120,
+                right: 120 + 38,
+                top: birdY,
+                bottom: birdY + 26
+            };
+            
+            for (let i = 0; i < pipes.length; i++) {
+                const p = pipes[i];
+                let xPos = parseFloat(p.top.style.left);
+                xPos -= gameSpeed;
+                p.top.style.left = xPos + 'px';
+                p.bottom.style.left = xPos + 'px';
+                
+                // remove if offscreen left
+                if (xPos + 70 < 0) {
+                    p.top.remove();
+                    p.bottom.remove();
+                    pipes.splice(i,1);
+                    i--;
+                    continue;
+                }
+                
+                // scoring: when pipe passes bird (left side of pipe < bird's right side)
+                if (!p.scored && xPos + 70 < 120) {
+                    p.scored = true;
+                    score++;
+                    scoreEl.textContent = score;
+                    // fun little wing flick on score
+                    triggerWingFlap();
+                }
+                
+                // collision boxes for top pipe
+                const topPipeRect = {
+                    left: xPos,
+                    right: xPos + 70,
+                    top: 0,
+                    bottom: parseFloat(p.top.style.height)
+                };
+                // collision bottom pipe
+                const bottomPipeRect = {
+                    left: xPos,
+                    right: xPos + 70,
+                    top: window.innerHeight - 120 - parseFloat(p.bottom.style.height),
+                    bottom: window.innerHeight - 120
+                };
+                
+                // Intersection test (Axis-Aligned)
+                if (birdRect.right > topPipeRect.left && birdRect.left < topPipeRect.right &&
+                    birdRect.bottom > topPipeRect.top && birdRect.top < topPipeRect.bottom) {
+                    gameOver();
+                    return;
+                }
+                if (birdRect.right > bottomPipeRect.left && birdRect.left < bottomPipeRect.right &&
+                    birdRect.bottom > bottomPipeRect.top && birdRect.top < bottomPipeRect.bottom) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // pipe spawn rate: every 100 frames ~ smooth generation
+            frameCounter++;
+            if (frameCounter >= 95) {
+                frameCounter = 0;
+                createPipe();
+            }
+        }
+        
+        // ----- Event listeners (keyboard, mouse, touch) -----
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                e.preventDefault();
+                jump();
             }
         });
-    </script>
+        
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
+        
+        // Global click on game area (for desktop) triggers jump when active
+        window.addEventListener('click', (e) => {
+            // avoid triggering when clicking on start button again (already handled)
+            if (startBtn && (e.target === startBtn || startBtn.contains(e.target))) return;
+            if (gameActive) {
+                jump();
+            } else {
+                // if home screen visible and clicked outside, maybe start? but better to start on any click? 
+                // to match user expectation: click anywhere on overlay (if home visible) starts game
+                if (homeScreen.style.display === 'flex' && !startBtn.contains(e.target)) {
+                    startGame();
+                }
+            }
+        });
+        
+        // touch events for mobile (prevent scrolling)
+        window.addEventListener('touchstart', (e) => {
+            // avoid double trigger on button
+            if (startBtn && (e.target === startBtn || startBtn.contains(e.target))) {
+                e.preventDefault();
+                startGame();
+                return;
+            }
+            e.preventDefault();
+            if (gameActive) {
+                jump();
+            } else if (homeScreen.style.display === 'flex') {
+                startGame();
+            }
+        }, { passive: false });
+        
+        // adjust bird initial position on window resize (keep proportional)
+        window.addEventListener('resize', () => {
+            if (!gameActive) {
+                birdY = window.innerHeight / 2 - 13;
+                bird.style.top = birdY + 'px';
+            } else {
+                // if active, just avoid breaking pipes but keep bird within bounds? just minor boundary safeguard
+                if (birdY + 26 > window.innerHeight - 120) {
+                    gameOver();
+                }
+            }
+        });
+        
+        // initial call to setup home and start animation loop
+        initHome();
+        update();
+        
+        // small preload to avoid gap on start (set ground clearance)
+        // ensure all wings are clean: we also fix any initial overlapping by z-index handling
+        // Wings z-index lower than eye pseudo but they are now far below eye region, but for ultimate safety
+        // we set bird pseudo higher stacking.
+        const styleFix = document.createElement('style');
+        styleFix.textContent = `#bird::before { z-index: 20; position: absolute; } #bird::after { z-index: 18; } .wing-cylinder-left, .wing-feather-left, .wing-cylinder-right, .wing-feather-right { z-index: 2; }`;
+        document.head.appendChild(styleFix);
+    })();
+</script>
 </body>
 </html>
