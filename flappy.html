@@ -5,12 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Flappy Bird — Clear Wing, No Eye Cover</title>
     <style>
+
     * {
         user-select: none;
         -webkit-tap-highlight-color: transparent;
     }
+    
+    .pipe-top::after{ display: none; }
+    .pipe-bottom::before { display: none;}
+
+    .difficulty{
+        display:flex;
+        gap: 12px;
+        margin: 0 0 18px 0;
+    }
+    .diff-btn{
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 2px solid #fff;
+        background: rgba(0,0,0,0.18);
+        color: #fff;
+        font-weight: 800;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .diff-btn.active {
+        background: #ffcc00;
+        color: #222;
+        border-color:#000;
+    }
+
     body {
-        background: #71c5cf;
+        background:var(--bg-color, #71c5cf);
         margin: 0;
         overflow: hidden;
         height: 100vh;
@@ -198,11 +224,23 @@
     .pipe {
         position: absolute;
         width: 70px;
-        background: linear-gradient(90deg, #3e9e3e 0%, #5ac45a 40%, #5ac45a 60%, #3e9e3e 100%);
+        background:
+            linear-gradient(90deg,
+                #1f6e2a 0%,
+                #39b84a 20%,
+                #5ad35a 45%,
+                #4bb94b 60%,
+                #2a7a33 100%),
+            repeating-linear-gradient(135deg,
+                rgba(0,0,0,0.08) 0 2px,
+                rgba(255,255,255,0.03) 2px 4px);
         border: 4px solid #2e7d32;
         border-radius: 12px;
         box-sizing: border-box;
-        box-shadow: inset -4px 0 6px rgba(0,0,0,0.4), inset 4px 0 6px rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.3);
+        box-shadow:
+            inset -5px 0 10px rgba(0,0,0,0.35),
+            inset 3px 0 6px rgba(255,255,255,0.18),
+            0 6px 14px rgba(0,0,0,0.25);
     }
 
     .pipe::before {
@@ -379,6 +417,11 @@
             <p>⭐ LAST SCORE: <span id="recent-score-display">0</span></p>
             <p>🏆 BEST: <span id="high-score-display">0</span></p>
         </div>
+        <div id="difficulty" class="difficulty">
+            <button class="diff-btn" data-diff="easy" type="button">easy</button>
+            <button class="diff-btn active" data-diff="normal" type="button">Normal</button>
+            <button class="diff-btn" data-diff="hard" type="button">Hard</button>
+        </div>
         <button class="play-btn" id="start-btn">FLY NOW</button>
         <p style="font-size: 15px; margin-top: 24px; opacity:0.9;">▼ SPACE / CLICK / TAP ▼</p>
     </div>
@@ -396,11 +439,13 @@
         const recentScoreDisplay = document.getElementById('recent-score-display');
         const highScoreDisplay = document.getElementById('high-score-display');
         const startBtn = document.getElementById('start-btn');
+        const difficultyWrap = document.getElementById('difficulty');
+        const diffBtns = document.querySelectorAll('.diff-btn');
         
         // ----- Game variables -----
         let birdY = 250;
         let velocity = 0;
-        const GRAVITY = 0.5;
+        let gravity = 0.5;
         const JUMP_POWER = -9;
         let pipes = [];
         let score = 0;
@@ -408,6 +453,65 @@
         let gameSpeed = 2.5;
         let frameCounter = 0;
         
+        // ----- Difficulty settings -----
+        let difficulty = 'normal';
+
+        const DIFF = {
+        easy: {
+            gameSpeed: 2.8,    
+            gap: 180,          
+            spawnFrames: 110,   
+            gravity: 0.55,
+            bgColor: '#7fe7a8'   
+        },
+        normal: {
+            gameSpeed: 3.5,     
+            gap: 155,           
+            spawnFrames: 85,    
+            gravity: 0.48,
+            bgColor: '#71c5cf'      
+        },
+        hard: {
+            gameSpeed: 4.8,     
+            gap: 135,           
+            spawnFrames: 55,    
+            gravity: 0.38,
+            bgColor: '#6a5bff'     
+        },
+    };
+
+        let currentGap = DIFF[difficulty].gap;
+        let spawnFrames = DIFF[difficulty].spawnFrames;
+
+        function setDifficulty(next) {
+
+
+            // Only allow changing difficulty from the home screen.
+            if (!homeScreen || homeScreen.style.display !== 'flex') return;
+            if (!next || !DIFF[next]) return;
+
+            difficulty = next;
+            diffBtns.forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.diff === difficulty);
+            });
+
+            // Keep gameplay config in sync (in case you start right after).
+            const cfg = DIFF[difficulty];
+            document.body.style.setProperty('--bg-color', cfg.bgColor);
+            gameSpeed = cfg.gameSpeed;
+            currentGap = cfg.gap;
+            spawnFrames = cfg.spawnFrames;
+            gravity = cfg.gravity;
+        }
+
+        diffBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDifficulty(btn.dataset.diff);
+            });
+        });
+
         // highscore from storage
         let highScore = localStorage.getItem('flappyHighScore') ? parseInt(localStorage.getItem('flappyHighScore')) : 0;
         highScoreDisplay.textContent = highScore;
@@ -443,6 +547,14 @@
         
         // ----- Core: Start/Restart game -----
         function startGame() {
+            //difficulty
+            const cfg = DIFF[difficulty];
+            document.body.style.setProperty('--bg-color', cfg.bgColor);
+            gameSpeed = cfg.gameSpeed;
+            currentGap = cfg.gap;
+            spawnFrames = cfg.spawnFrames;
+            gravity= cfg.gravity;
+
             // reset bird physics
             birdY = window.innerHeight / 2 - 13;
             velocity = 0;
@@ -494,7 +606,7 @@
         
         // ----- Create new pipe pair (gap 160px) -----
         function createPipe() {
-            const gap = 160;
+            const gap = currentGap;
             const groundHeight = 120;
             const minTopHeight = 55;
             const maxTopHeight = window.innerHeight - gap - groundHeight - minTopHeight;
@@ -558,7 +670,7 @@
             if (!gameActive) return;
             
             // gravity physics
-            velocity += GRAVITY;
+            velocity += gravity;
             birdY += velocity;
             bird.style.top = birdY + 'px';
             
@@ -637,7 +749,7 @@
             
             // pipe spawn rate: every 100 frames ~ smooth generation
             frameCounter++;
-            if (frameCounter >= 95) {
+            if (frameCounter >= spawnFrames) {
                 frameCounter = 0;
                 createPipe();
             }
@@ -660,6 +772,8 @@
         window.addEventListener('click', (e) => {
             // avoid triggering when clicking on start button again (already handled)
             if (startBtn && (e.target === startBtn || startBtn.contains(e.target))) return;
+            // don't start game when clicking difficulty selector
+            if (difficultyWrap && difficultyWrap.contains(e.target)) return;
             if (gameActive) {
                 jump();
             } else {
@@ -673,6 +787,15 @@
         
         // touch events for mobile (prevent scrolling)
         window.addEventListener('touchstart', (e) => {
+            // don't start game when touching difficulty selector
+            if (difficultyWrap && difficultyWrap.contains(e.target)) {
+                const btn = (e.target.closest && e.target.closest('.diff-btn')) ? e.target.closest('.diff-btn') : null;
+                e.preventDefault();
+                e.stopPropagation();
+                if (btn && btn.dataset && btn.dataset.diff) setDifficulty(btn.dataset.diff);
+                return;
+            }
+
             // avoid double trigger on button
             if (startBtn && (e.target === startBtn || startBtn.contains(e.target))) {
                 e.preventDefault();
@@ -704,10 +827,10 @@
         initHome();
         update();
         
-        // small preload to avoid gap on start (set ground clearance)
-        // ensure all wings are clean: we also fix any initial overlapping by z-index handling
-        // Wings z-index lower than eye pseudo but they are now far below eye region, but for ultimate safety
-        // we set bird pseudo higher stacking.
+
+
+
+
         const styleFix = document.createElement('style');
         styleFix.textContent = `#bird::before { z-index: 20; position: absolute; } #bird::after { z-index: 18; } .wing-cylinder-left, .wing-feather-left, .wing-cylinder-right, .wing-feather-right { z-index: 2; }`;
         document.head.appendChild(styleFix);
