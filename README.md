@@ -1,28 +1,72 @@
-# Flappy Birds Again
+# Flappy Bird 
 
-## Overview
-Flappy Birds Again is a fun, engaging game built using HTML and JavaScript that captures the essence of the original Flappy Birds game. The goal is simple: navigate your bird through a series of pipes without crashing into them.
+A clean, beautiful, and deliberately over-engineered Flappy Bird clone where the bird's eye is **never** covered by the wings. Pure CSS + vanilla JS, no canvas, no bullshit.
 
-**Play the game here:** https://quiet-octopus.static2.website/flappy
+**Play it here:**  
+https://quiet-octopus.static2.website/flappy
 
-## Features
-- **Responsive Design**: Works well on mobile and desktop browsers.
-- **Easy to Play**: One-touch gameplay for a smooth experience.
-- **Scoring System**: Earn points for each pipe you successfully navigate through.
-- **Challenging Gameplay**: Difficulty increases as you play, offering a fun challenge.
+---
 
-## How to Play
-1. Press the spacebar or tap the screen to make the bird flap.
-2. Avoid the pipes as you navigate through the air.
-3. Try to achieve the highest score possible!
+### Features
 
-## How to Run the Game
-1. Download the repository.
-2. Open the `index.html` file in your web browser.
-3. Enjoy playing and share your score!
+- **Eye always visible** – wings repositioned lower and outward so the eye stays crystal clear at all times (the whole point of this version)
+- Three difficulty levels: **Easy**, **Normal**, **Hard** (changes speed, gap, gravity, and background color)
+- Smooth wing flap animation that doesn't clip the eye
+- Proper physics, rotation, and juicy pipe design
+- High score saved in localStorage
+- Fully responsive (works on mobile & desktop)
+- Controls: **Space / Click / Tap**
+- Zero dependencies, single HTML file
 
-## Contributing
-If you'd like to contribute to the game, feel free to fork the repository and make a pull request. We welcome any new features or improvements!
+---
 
-## License
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+### How to Use
+
+1. Just open the HTML file in any modern browser (Chrome, Firefox, Edge, Safari).
+2. Or host it anywhere and play online.
+3. On the home screen you can choose difficulty before flying.
+4. Press **SPACE**, **click**, or **tap** to flap.
+
+---
+
+### Controls
+
+- **Space** / **Up Arrow** / **W** → Flap
+- **Mouse Click** → Flap
+- **Touch** → Flap (mobile)
+
+---
+
+### Tech Stack
+
+- Pure HTML5 + CSS3 + Vanilla JavaScript
+- No Canvas, no external libraries
+- All visuals done with CSS (including detailed pipes and bird)
+- localStorage for high score persistence
+
+---
+
+### Why This Version Exists
+
+Because every other Flappy Bird clone has that stupid wing that covers the bird's eye half the time.  
+I fixed that shit. Wings now flap **below** and **away** from the eye. Eye stays visible forever. You're welcome.
+
+---
+
+### Files
+
+This is a **single-file game**. Just save the entire code as `index.html` and open it.
+
+---
+
+### License
+
+Do whatever the fuck you want with it.  
+Steal it, modify it, host it, sell it, I don't care.
+
+Made with pure spite and love for clean bird physics.
+
+---
+
+**Enjoy getting pissed off at pipes.**  
+https://quiet-octopus.static2.website/flappy
